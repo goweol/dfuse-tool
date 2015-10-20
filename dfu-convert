@@ -9,6 +9,7 @@ from optparse import OptionParser
 from intelhex import IntelHex
 
 DEFAULT_DEVICE="0x0483:0xdf11"
+DEFAULT_COMMENT="ST..."
 
 def named(tuple,names):
   return dict(zip(names.split(),tuple))
@@ -56,13 +57,13 @@ def parse(file,dump_images=False):
   if data:
     print "PARSE ERROR"
 
-def build(file,targets,device=DEFAULT_DEVICE):
+def build(file,targets,device=DEFAULT_DEVICE,comment=DEFAULT_COMMENT):
   data = ''
   for t,target in enumerate(targets):
     tdata = ''
     for image in target:
       tdata += struct.pack('<2I',image['address'],len(image['data']))+image['data']
-    tdata = struct.pack('<6sBI255s2I','Target',0,1,'ST...',len(tdata),len(target)) + tdata
+    tdata = struct.pack('<6sBI255s2I','Target',0,1,comment,len(tdata),len(target)) + tdata
     data += tdata
   data  = struct.pack('<5sBIB','DfuSe',1,len(data)+11,len(targets)) + data
   v,d=map(lambda x: int(x,0) & 0xFFFF, device.split(':',1))
@@ -84,6 +85,8 @@ if __name__=="__main__":
     help="build a DFU file from given HEXFILES", metavar="HEXFILES")
   parser.add_option("-D", "--device", action="store", dest="device",
     help="build for DEVICE, defaults to %s" % DEFAULT_DEVICE, metavar="DEVICE")
+  parser.add_option("-C", "--comment", action="store", dest="comment",
+    help="add comment, defaults to %s" % DEFAULT_COMMENT, metavar="COMMENT")
   parser.add_option("-d", "--dump", action="store_true", dest="dump_images",
     default=False, help="dump contained images to current directory")
   (options, args) = parser.parse_args()
@@ -129,7 +132,10 @@ if __name__=="__main__":
     except:
       print "Invalid device '%s'." % device
       sys.exit(1)
-    build(outfile,[target],device)
+    comment = DEFAULT_COMMENT
+    if options.comment:
+      comment = options.comment
+    build(outfile,[target],device,comment)
   elif len(args)==1:
     infile = args[0]
     if not os.path.isfile(infile):
